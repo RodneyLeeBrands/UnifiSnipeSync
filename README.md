@@ -23,20 +23,20 @@ This project is a Python script that synchronizes UniFi devices with Snipe-IT. I
 
 1.  Clone the repository or download the source code.
 
-```
+```bash
 `git clone https://github.com/yourusername/unifi-to-snipeit.git cd unifi-to-snipeit`
 ```
 
 2.  Install the required libraries.
 
-```
+```bash
 pip3 install -r requirements.txt
 
 ```
 
 3.  Copy `config_example.ini` to `config.ini` and update the configuration settings with your UniFi and Snipe-IT credentials and preferences.
 
-```
+```bash
 cp config_example.ini config.ini
 ```
 
@@ -58,18 +58,24 @@ We used the PyUnifi libary to interact with the Unifi API. You might want to rea
 
 To run the script, execute the following command:
 
-```
+```bash
 python main.py
 ```
 
 To perform a dry run without making changes to Snipe-IT, use the `--dry-run` option:
 
-```
+```bash
 python main.py --dry-run
 ```
 
 During the dry run, the script will output a summary of the changes that would be made to Snipe-IT.
 
+To override the `site_id` specified in the config file, use the `--site-id` option followed by the new site ID:
+
+```bash
+python main.py --site-id new_site_id
+```
+This is useful if you if your unifi controler has more than one site. There is not currently support for more than one controler. If you have multible controlers we recommend setting up another instance of the script with a different config file.
 
 Contributing
 ------------

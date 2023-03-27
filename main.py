@@ -178,6 +178,7 @@ def add_devices_to_snipeit(devices, unifi_devices_in_snipe, dry_run):
 def main():
     parser = argparse.ArgumentParser(description="Unifi to Snipe-IT script")
     parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without making changes to Snipe-IT")
+    parser.add_argument("--site-id", type=str, help="Override the site_id specified in the config file")
     args = parser.parse_args()
     controller = create_unifi_controller(
         config.get("UniFi", "controller_url"),
@@ -185,7 +186,7 @@ def main():
         config.get("UniFi", "password"),
         config.getint("UniFi", "port"),
         config.get("UniFi", "version"),
-        config.get("UniFi", "site_id"),
+        args.site_id if args.site_id else config.get("UniFi", "site_id"),
     )
     unifi_devices = fetch_devices(controller)
     formatted_devices = format_devices_from_unifi(unifi_devices)
