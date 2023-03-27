@@ -16,6 +16,7 @@ This project is a Python script that synchronizes UniFi devices with Snipe-IT. I
 *   `requests` library
 *   `ratelimiter` library
 *   `tabulate` library
+*   `pyunifi` library
 
 ## Installation
 
