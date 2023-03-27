@@ -1,10 +1,8 @@
-UniFi to Snipe-IT
-=================
+# UniFi to Snipe-IT
 
 This project is a Python script that synchronizes UniFi devices with Snipe-IT. It fetches devices from a UniFi controller, formats them, and adds or updates them in Snipe-IT. The script can also create new models in Snipe-IT if they don't already exist.
 
-Features
---------
+## Features
 
 *   Fetch devices from UniFi controller
 *   Fetch existing UniFi devices from Snipe-IT
@@ -12,60 +10,65 @@ Features
 *   Add new devices to Snipe-IT or update existing ones
 *   Dry run mode to preview changes without modifying Snipe-IT
 
-Requirements
-------------
+## Requirements
 
 *   Python 3.6 or higher
 *   `requests` library
 *   `ratelimiter` library
 *   `tabulate` library
 
-Installation
-------------
+## Installation
+
 
 1.  Clone the repository or download the source code.
 
-bashCopy code
-
+```
 `git clone https://github.com/yourusername/unifi-to-snipeit.git cd unifi-to-snipeit`
+```
 
-2.  Create a virtual environment and install the required libraries.
+2.  Install the required libraries.
 
-bashCopy code
+```
+pip3 install -r requirements.txt
 
-``python -m venv venv source venv/bin/activate  # On Windows, use `venv\Scripts\activate` pip install -r requirements.txt``
+```
 
 3.  Copy `config_example.ini` to `config.ini` and update the configuration settings with your UniFi and Snipe-IT credentials and preferences.
 
-bashCopy code
+```
+cp config_example.ini config.ini
+```
 
-`cp config_example.ini config.ini`
+## Configuration
 
-Usage
------
-
-To run the script, execute the following command:
-
-bashCopy code
-
-`python main.py`
-
-To perform a dry run without making changes to Snipe-IT, use the `--dry-run` option:
-
-bashCopy code
-
-`python main.py --dry-run`
-
-During the dry run, the script will output a summary of the changes that would be made to Snipe-IT.
-
-Configuration
--------------
 
 Update the `config.ini` file with your UniFi controller and Snipe-IT API credentials and preferences. The following sections are available for configuration:
 
 *   `[UniFi]`: UniFi controller settings (URL, username, password, port, version, and site ID)
 *   `[SnipeIT]`: Snipe-IT API settings (API URL, API key, manufacturer, model category ID, MAC address field name, default status ID, and rate limit)
 *   `[unifi_model_mapping]`: UniFi model mapping for converting UniFi model names to Snipe-IT model names
+
+### PyUnifi
+We used the PyUnifi libary to interact with the Unifi API. You might want to read through their docs to debug your particular connection. We included a unifi.py file where you can test your settings. https://github.com/finish06/pyunifi
+
+
+## Usage
+
+
+To run the script, execute the following command:
+
+```
+python main.py
+```
+
+To perform a dry run without making changes to Snipe-IT, use the `--dry-run` option:
+
+```
+python main.py --dry-run
+```
+
+During the dry run, the script will output a summary of the changes that would be made to Snipe-IT.
+
 
 Contributing
 ------------
