@@ -78,6 +78,8 @@ To run the script, execute the following command:
 python main.py
 ```
 
+![Screen Shot Of Changes](unifiSnipeSync_Dry_Run_Screenshot.jpg)
+
 To perform a dry run without making changes to Snipe-IT, use the `--dry-run` option:
 
 ```bash
