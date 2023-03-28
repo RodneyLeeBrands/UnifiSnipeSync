@@ -11,6 +11,7 @@ from pyunifi.controller import Controller
 import configparser
 from snipe import Snipe
 import argparse
+from termcolor import colored, cprint
 from tabulate import tabulate
 
 
@@ -48,8 +49,10 @@ def format_devices_from_unifi(unifi_devices):
             "name": device.get("name", device["mac"]),
             "mac_address": device["mac"],
             "model": device["model"],
-            "serial": device.get("serial", "")
+            "serial": device.get("serial", ""),
             #"asset_tag": device.get("asset_tag", ""),
+            #if an asset is a router, we want to get it's local IP address and not it's public ip. UXG at least, has a lan_ip feild that the other devices do not.
+            "ip_address": device.get("lan_ip", device["ip"]),
         }
         formatted_devices.append(formatted_device)
     return formatted_devices
@@ -61,15 +64,13 @@ def fetch_unifi_devices_from_snipeit(manufacturer):
 
 # Function to check if a device exists in the fetched UniFi devices array using its MAC address
 # Now returns the existing device if found
-def device_exists_in_snipeit(mac_address, unifi_devices):
+def device_exists_in_snipeit(serial, unifi_devices):
     for device in unifi_devices:
-        mac = None
-        for key, field in device['custom_fields'].items():
-            if field['field'] == mac_address_field_name:
-                mac = field['value']
-                break
+        #Unifi's serial numbers are just mac-addresses. We have stored the serial numbers in Snipe with XX:XX:XX:XX:XX:XX formatting. The Unifi API returns XXXXXXXXXXXX. To keep from having to update snipe, we are going to normalize the data.
+        #strip snipe-it seriel of colon and make lowercase. 
+        snipe_seriel = device["serial"].replace(':', '').lower() 
 
-        if mac.lower() == mac_address.lower():
+        if serial.lower() == snipe_seriel:
             return device
     return None
 
@@ -80,7 +81,7 @@ def fetch_unifi_models_from_snipeit(manufacturer_id):
     unifi_models = []
 
     for model in all_models:
-        print("checking model", model)
+
         if model.get('manufacturer') and int(model['manufacturer']['id']) == int(manufacturer_id):
             mapped_model = model.copy()
             mapped_model['model_number'] = unifi_model_mapping.get(model['model_number'].lower(), model['model_number'])
@@ -122,9 +123,11 @@ def add_devices_to_snipeit(devices, unifi_devices_in_snipe, dry_run):
 
     changes = []
     for device in devices:
-        print("adding new device to snipeit")
+        #add custom field to device for later use
+
+        print("Checking device "+device['name']+" - ("+device['serial']+")")
        # print(device)
-        existing_device = device_exists_in_snipeit(device["mac_address"], unifi_devices_in_snipe)
+        existing_device = device_exists_in_snipeit(device["serial"], unifi_devices_in_snipe)
         remapped_model_number = unifi_model_mapping.get(device["model"], device["model"])
        # print("remapped_model_number", remapped_model_number)
         model = {
@@ -134,34 +137,119 @@ def add_devices_to_snipeit(devices, unifi_devices_in_snipe, dry_run):
         }
         model_in_snipeit = create_model_if_not_exists(model, unifi_models, dry_run)
         
-        print("model_in_snipeit", model_in_snipeit)
-
         if model_in_snipeit:
             device["model_id"] = model_in_snipeit["id"]
 
         if existing_device:
-            changes.append({
-                "Action": "Update",
-                "Device Name": device["name"],
-                "Device MAC": device["mac_address"],
-                "Model": device["model"],
-                "Model ID": device["model_id"],
-            })
-            if not dry_run:
+            changeForDevice = {
+                "Action": "",
+                "Unifi Device Name": "",
+                "Snipe Name": "",
+                "Device Serial": "",
+                "Device MAC": "",
+                "Model": "",
+                "Snipe-IT Model ID": "",
+                "IP Address": ""
+            }
+            #Compare Unfi and Snipe-IT device data and determain if either needs to be updated
+            snipeUpdateNeeded = False
+
+            #check if device name is different
+            if(device['name'] != existing_device['name']):
+                device_name_priority = config.get('SnipeIT', 'device_name_priority')
+                if(device_name_priority == "unifi"):
+                    #we need to update Snipe-IT with the name set in Unifi
+                    snipeUpdateNeeded = True 
+                    print("device name needed changing");
+                    changeForDevice['Unifi Device Name'] = device['name']
+                    changeForDevice['Snipe Name'] = (f"\033[32m"+device['name']+"\033[0m ("+existing_device['name']+")")
+                else:
+                    #no change is needed, but we need to update the changeForDevice object
+                    changeForDevice['Unifi Device Name'] = device['name']
+                    changeForDevice['Snipe Name'] = existing_device['name']
+            else:
+                changeForDevice['Unifi Device Name'] = device['name']
+                changeForDevice['Snipe Name'] = existing_device['name']
+            
+            #check if IP address needs to be updated
+            ip_address_field_name = config.get('SnipeIT', 'ip_address_field_name')
+            
+            snipe_ip_address = ""
+            for key, field in existing_device['custom_fields'].items():
+                if field['field'] == ip_address_field_name:
+                    snipe_ip_address = field['value']
+                    break
+
+            if(device['ip_address'] != snipe_ip_address):
+                snipeUpdateNeeded = True
+                print("device IP address needed changing");
+                changeForDevice['IP Address'] = (f"\033[32m"+device['ip_address']+"\033[0m ("+snipe_ip_address+")")
+                #add IP address to custom fields
+                device[ip_address_field_name] = device['ip_address']
+                
+                
+            else:
+                changeForDevice['IP Address'] = device['ip_address']
+            
+            #check if mac address needs to be updated
+            mac_address_field_name = config.get('SnipeIT', 'mac_address_field_name')
+            
+            snipe_mac_address = ""
+            for key, field in existing_device['custom_fields'].items():
+                if field['field'] == mac_address_field_name:
+                    snipe_mac_address = field['value']
+                    break
+
+            if(device['mac_address'].lower() != snipe_mac_address.lower()):
+                snipeUpdateNeeded = True
+                print("device MAC address needed changing")
+                changeForDevice['Device MAC'] = (f"\033[32m"+device['mac_address']+"\033[0m ("+snipe_mac_address.lower()+")")
+                #add MAC address to custom fields
+                device[mac_address_field_name] = device['mac_address']
+
+            else:
+                changeForDevice['Device MAC'] = device['mac_address']
+
+
+            if(snipeUpdateNeeded):
+                changeForDevice['Action'] = (f"\033[32m Update \033[0m")
+                changeForDevice['Device Serial'] = device['serial']
+                changeForDevice['Model'] = device['model']
+                changeForDevice['Snipe-IT Model ID'] = device['model_id']
+                changes.append(changeForDevice)
+            else:
+                changes.append({
+                    "Action": (f"\033[33m Skipped \033[0m"),
+                    "Unifi Device Name": (f"\033[33m "+ device["name"] +"\033[0m"),
+                    "Snipe Name": (f"\033[33m "+ existing_device["name"] +"\033[0m"),
+                    "Device Serial": (f"\033[33m "+ device["serial"] +"\033[0m"),
+                    "Device MAC": (f"\033[33m "+ device["mac_address"] +"\033[0m"),
+                    "Model": (f"\033[33m "+ device["model"] +"\033[0m"),
+                    "Snipe-IT Model ID": (f"\033[33m "+ str(device["model_id"]) +"\033[0m"),
+                    "IP Address": (f"\033[33m "+ device['ip_address'] +"\033[0m")
+                })
+
+
+
+
+            if not dry_run and snipeUpdateNeeded:
+                
                 response = snipe.update_hardware(existing_device["id"], device)
                 print(f"Device {device['name']} updated in Snipe-IT. Status: {response.status_code}")
         else:
             #add device status to request
             device['status_id'] = config.get("SnipeIT", "default_status_id")
             #add empty asset tag to request
-           # device['asset_tag'] = None
+            # device['asset_tag'] = None
     
             changes.append({
                 "Action": "Create",
-                "Device Name": device["name"],
+                "Unifi Device Name": device["name"],
+                "Device Serial": device["serial"],
                 "Device MAC": device["mac_address"],
                 "Model": device["model"],
-                "Model ID": device["model_id"],
+                "Snipe-IT Model ID": device["model_id"],
+                "IP Address": device['ip_address']
             })
 
 
@@ -171,7 +259,8 @@ def add_devices_to_snipeit(devices, unifi_devices_in_snipe, dry_run):
 
     if dry_run:
         print("Dry run summary:")
-        print(tabulate(changes, headers="keys"))
+        
+    print(tabulate(changes, headers="keys"))
 
 
 # Main script

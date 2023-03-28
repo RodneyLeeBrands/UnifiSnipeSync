@@ -7,7 +7,7 @@ This project is a Python script that synchronizes UniFi devices with Snipe-IT. I
 *   Fetch devices from UniFi controller
 *   Fetch existing UniFi devices from Snipe-IT
 *   Create new models in Snipe-IT if they don't already exist
-*   Add new devices to Snipe-IT or update existing ones
+*   Add or update devices in Snipe-IT based on their serial numbers.
 *   Dry run mode to preview changes without modifying Snipe-IT
 
 ## Requirements
@@ -17,6 +17,9 @@ This project is a Python script that synchronizes UniFi devices with Snipe-IT. I
 *   `ratelimiter` library
 *   `tabulate` library
 *   `pyunifi` library
+*   `termcolor` libary
+
+These can all be installed using requirements.txt discribed in the steps below.
 
 ## Installation
 
@@ -40,14 +43,27 @@ pip3 install -r requirements.txt
 cp config_example.ini config.ini
 ```
 
+## Prep Work In Snipe
+There are a few thigns to take care of in Snipe-IT before you start the configuration
+
+1. Get an API Key
+2. Create a manufacturer of Ubuiquiti (if you have not already, or choose a default manufacturer)
+3. Create a Networking Asset Category (if you have not already, or choose a default asset category)
+4. Make sure the fieldset you are using has a ip address custom field
+5. Make sure the fieldset you are using has a mac address custom field
+
+
 ## Configuration
 
 
 Update the `config.ini` file with your UniFi controller and Snipe-IT API credentials and preferences. The following sections are available for configuration:
 
 *   `[UniFi]`: UniFi controller settings (URL, username, password, port, version, and site ID)
-*   `[SnipeIT]`: Snipe-IT API settings (API URL, API key, manufacturer, model category ID, MAC address field name, default status ID, and rate limit)
+*   `[SnipeIT]`: Snipe-IT API settings (API URL, API key, manufacturer, model category ID, MAC address field name, IP address feild name, default status ID, device name priority, and rate limit)
 *   `[unifi_model_mapping]`: UniFi model mapping for converting UniFi model names to Snipe-IT model names
+
+### Model Mapping
+Ubuiquiti has had some "fun" with their model numbers. When origionally adding our Unifi devices into Snipe-IT, we used the model numbers shown of the devices detail page in the control panel. However, the API returns a completly different set of model numbers for devices. The unifi_model_mapping allows you to map the API model numbers to existing models numbers you might have set in Snipe-IT already.
 
 ### PyUnifi
 We used the PyUnifi libary to interact with the Unifi API. You might want to read through their docs to debug your particular connection. We included a unifi.py file where you can test your settings. https://github.com/finish06/pyunifi
@@ -75,7 +91,7 @@ To override the `site_id` specified in the config file, use the `--site-id` opti
 ```bash
 python main.py --site-id new_site_id
 ```
-This is useful if you if your unifi controler has more than one site. There is not currently support for more than one controler. If you have multible controlers we recommend setting up another instance of the script with a different config file.
+This is useful if your unifi controler has more than one site. There is not currently support for more than one controler. If you have multible controlers we recommend setting up another instance of the script with a different config file.
 
 Contributing
 ------------
